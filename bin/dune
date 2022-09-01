@@ -1,0 +1,7 @@
+(executable
+ (public_name OClox)
+ (name main)
+ (libraries OClox))
+(env
+ (dev
+  (flags (:standard -warn-error -A))))
