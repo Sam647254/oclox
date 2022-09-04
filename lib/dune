@@ -1,2 +1,5 @@
 (library
  (name OClox))
+(env
+ (dev
+  (flags (:standard -warn-error -A))))
