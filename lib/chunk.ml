@@ -7,6 +7,14 @@ type opcode =
   | Constant
   | LongConstant
   | Negate
+  | Add
+  | Subtract
+  | Multiply
+  | Divide
+
+type vm_byte =
+  | Opcode of opcode
+  | Value of int
 
 type chunk =
   { chunk_bytes: bytes;
@@ -27,6 +35,10 @@ let opcode_byte_to_opcode (op: char) =
   | '\x01' -> Constant
   | '\x02' -> LongConstant
   | '\x03' -> Negate
+  | '\x04' -> Add
+  | '\x05' -> Subtract
+  | '\x06' -> Multiply
+  | '\x07' -> Divide
   | _ -> raise (Unknown_bytecode op)
 
 let opcode_to_byte (op: opcode) =
@@ -35,6 +47,10 @@ let opcode_to_byte (op: opcode) =
   | Constant -> '\x01'
   | LongConstant -> '\x02'
   | Negate -> '\x03'
+  | Add -> '\x04'
+  | Subtract -> '\x05'
+  | Multiply -> '\x06'
+  | Divide -> '\x07'
 
 let print_value constant =
   printf "%g" constant
@@ -73,3 +89,14 @@ let rec disassemble chunk byte_index single =
 let print_disassemble (chunk: chunk) (name: string) =
   printf "== %s ==\n" name;
   disassemble chunk 0
+
+let vm_byte_to_byte vm_byte =
+  match vm_byte with
+  | Opcode op -> opcode_to_byte op
+  | Value value -> Char.chr value
+
+let create_chunk vm_bytes constants =
+  let vm_chars = List.map vm_byte_to_byte vm_bytes in
+  { chunk_bytes = Bytes.of_seq (List.to_seq vm_chars);
+    lines = [|0; List.length vm_bytes|];
+    constants }

@@ -30,6 +30,15 @@ let read_constant vm =
   let index = get_next_byte vm in
   Float.Array.get vm.chunk.constants (Char.code index)
 
+let pop_stack vm = Stack.pop vm.stack
+
+let push_stack vm value = Stack.push value vm.stack
+
+let binary_op vm op =
+  let b = pop_stack vm in
+  let a = pop_stack vm in
+  push_stack vm (op a b)
+
 let read_long_constant vm =
   let index =
     let byte1 = get_next_byte vm in
@@ -44,20 +53,24 @@ let rec interpret_acc vm =
   let instruction = get_next_byte vm in
   match opcode_byte_to_opcode instruction with
   | Return ->
-    let return_value = Stack.pop vm.stack in
+    let return_value = pop_stack vm in
     print_value return_value;
     print_newline ();
     Ok
   | Constant ->
     let constant = read_constant vm in
-    Stack.push constant vm.stack;
+    push_stack vm constant;
     interpret_acc vm
   | LongConstant ->
     let constant = read_long_constant vm in
-    Stack.push constant vm.stack;
+    push_stack vm constant;
     interpret_acc vm
+  | Add -> binary_op vm (+.); interpret_acc vm
+  | Subtract -> binary_op vm (-.); interpret_acc vm
+  | Multiply -> binary_op vm Float.mul; interpret_acc vm
+  | Divide -> binary_op vm (/.); interpret_acc vm
   | Negate ->
-    Stack.pop vm.stack
+    pop_stack vm
     |> (~-.)
     |> (fun v -> Stack.push v vm.stack);
     interpret_acc vm

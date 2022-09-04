@@ -3,7 +3,16 @@ open OClox.Vm
 
 let () =
   let chunk =
-    { chunk_bytes = Bytes.of_string "\x01\x00\x03\x00";
-      constants = Float.Array.of_list [1.2];
-      lines = [|123; 6|] } in
+    create_chunk
+      [ Opcode Constant;
+        Value 0;
+        Opcode Constant;
+        Value 1;
+        Opcode Add;
+        Opcode Constant;
+        Value 2;
+        Opcode Divide;
+        Opcode Negate;
+        Opcode Return ]
+      (Float.Array.of_list [1.2; 3.4; 5.6]) in
   let _ = interpret chunk in ()
