@@ -48,8 +48,49 @@ type token = {
 
 type lexer = {
   stream: char Stream.t;
-  line: int;
+  mutable line: int;
 }
+
+let token_type_to_string token_type =
+  match token_type with
+  | LeftParen -> "LeftParen"
+  | RightParen -> "RightParen"
+  | LeftBrace -> "LeftBrace"
+  | RightBrace -> "RightBrace"
+  | Comma -> "Comma"
+  | Dot -> "Dot"
+  | Minus -> "Minus"
+  | Plus -> "Plus"
+  | DoublePlus -> "DoublePlus"
+  | Semicolon -> "Semicolon"
+  | Slash -> "Slash"
+  | Star -> "Star"
+  | Bang -> "Bang"
+  | BangEqual -> "BangEqual"
+  | Equal -> "Equal"
+  | DoubleEqual -> "DoubleEqual"
+  | Greater -> "Greater"
+  | GreaterEqual -> "GreaterEqual"
+  | Less -> "Less"
+  | LessEqual -> "LessEqual"
+  | Identifier _ -> "Identifier"
+  | String _ -> "String"
+  | Number _ -> "Number"
+  | And -> "And"
+  | Struct -> "Struct"
+  | Else -> "Else"
+  | False -> "False"
+  | For -> "For"
+  | Fun -> "Fun"
+  | If -> "If"
+  | Nil -> "Nil"
+  | Or -> "Or"
+  | Print -> "Print"
+  | Return -> "Return"
+  | True -> "True"
+  | Var -> "Val"
+  | While -> "While"
+  | EOF -> "EOF"
 
 let make_token lexer lexeme token_type =
   { token_type;
@@ -194,16 +235,48 @@ let rec scan_token lexer =
       | 'a'..'z' | 'A'..'Z' | '_' ->
         read_identifier c lexer
         |> Result.map (to_keyword lexer)
+      | '\n' ->
+        lexer.line <- lexer.line + 1;
+        scan_token lexer
       | c -> Error (sprintf "Unexpected character %c on line %d" c lexer.line)
 
-let rec print_tokens lexer =
-  let line = ref ~-1 in
+let rec scan_acc lexer tokens =
   match scan_token lexer with
   | Ok token ->
-    (if token.line <> !line then
-      (printf "%4d " token.line;
-      line := token.line)
+    if token.token_type = EOF then
+      Ok (List.rev tokens)
     else
-      printf "   | ");
-    print_tokens lexer
-  | Error message -> print_endline message
+      scan_acc lexer (token :: tokens)
+  | Error _ as e -> e
+
+let scan_source source =
+  let lexer =
+    { stream = Stream.of_string source;
+      line = 1 } in
+  scan_acc lexer []
+
+let scan input_file =
+  let lexer =
+    { stream = Stream.of_channel input_file;
+      line = 1 } in
+  scan_acc lexer []
+
+let print_tokens source =
+  let lexer =
+    { stream = Stream.of_string source;
+      line = 1 } in
+  let rec print_tokens_acc lexer =
+    let line = ref ~-1 in
+    match scan_token lexer with
+    | Ok token ->
+      (if token.line <> !line then
+        (printf "%4d " token.line;
+        line := token.line)
+      else
+        printf "   | ");
+      printf "%16s '%s'\n" (token_type_to_string token.token_type) token.lexeme;
+      if token.token_type == EOF then () else
+      print_tokens_acc lexer
+    | Error message -> print_endline message
+  in
+  print_tokens_acc lexer
