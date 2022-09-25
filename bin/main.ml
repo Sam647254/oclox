@@ -18,6 +18,8 @@ let chunk =
 
 let () =
   let _ =
-    compile "print 1 + 2;"
-    |> Result.map interpret in
+    compile "1 + 2"
+    |> Result.map (fun chunk -> print_disassemble "program" chunk; chunk)
+    |> Result.map interpret
+    |> Result.map_error print_endline in
   ()

@@ -27,6 +27,7 @@ let opcode_byte_to_string (op: char) =
   | '\x01' -> "Constant"
   | '\x02' -> "Long constant"
   | '\x03' -> "Negate"
+  | '\x04' -> "Add"
   | _ -> sprintf "Unknown opcode %d" (Char.code op)
 
 let opcode_byte_to_opcode (op: char) =
@@ -86,9 +87,10 @@ let rec disassemble chunk byte_index single =
     if single then () else disassemble chunk (byte_index + 1) single
 
 
-let print_disassemble (chunk: chunk) (name: string) =
+let print_disassemble (name: string) (chunk: chunk) =
   printf "== %s ==\n" name;
-  disassemble chunk 0
+  disassemble chunk 0 false;
+  print_endline "== end =="
 
 let vm_byte_to_byte vm_byte =
   match vm_byte with

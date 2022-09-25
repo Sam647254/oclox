@@ -53,8 +53,8 @@ let parse tokens =
 
   let rec emit_constant c line =
     byte_list :=
-      (opcode_to_byte Constant)
-        :: (char_of_int (List.length !constants))
+    (char_of_int (List.length !constants))
+        :: (opcode_to_byte Constant)
         :: !byte_list;
     constants := c :: !constants;
     lines := line :: !lines
@@ -77,9 +77,32 @@ let parse tokens =
     | Number _ -> Some parse_number, None, Bottom
     | _ -> None, None, Bottom
   
+  and parse_infix_precedence precedence tokens =
+    match tokens with
+    | token :: _ ->
+      let (_, infix_rule, token_precedence) = get_rule token.token_type in
+      if precedence <= token_precedence then
+        match infix_rule with
+        | Some rule ->
+            Result.bind
+              (rule tokens)
+              (parse_infix_precedence precedence)
+        | None -> Error (sprintf "Unable to parse %s" (token_type_to_string token.token_type))
+      else
+        Ok tokens
+    | [] -> Ok []
+  
   and parse_precedence precedence tokens: (token list, string) result =
-    let pred = precedence_of precedence in
-    failwith "TODO"
+    match tokens with
+    | token :: _ ->
+      (let (prefix_rule, _, _)= get_rule token.token_type in
+      match prefix_rule with
+      | Some rule ->
+          Result.bind
+            (rule tokens)
+            (parse_infix_precedence precedence)
+      | None -> Error (sprintf "Unexpected token: %s" (token_type_to_string token.token_type)))
+    | [] -> Error "Unexpected end of input while parsing"
   
   and parse_expression tokens =
     parse_precedence Assignment tokens
@@ -121,7 +144,15 @@ let parse tokens =
     | [] -> Error "Unexpected end of input while parsing number"
 
   in
-  let parse_acc tokens previous =
-    failwith "TODO"
-  in
-  failwith "TODO"
+  Result.bind
+    (parse_expression tokens)
+    (fun remaining_tokens ->
+      if remaining_tokens <> [] then
+        Error "Leftover tokens"
+      else
+        (emit_byte Return;
+        Ok ({
+          chunk_bytes = !byte_list |> List.rev |> List.to_seq |> Bytes.of_seq;
+          lines = !lines |> List.rev |> Array.of_list;
+          constants = !constants |> List.rev |> Float.Array.of_list
+        })))
